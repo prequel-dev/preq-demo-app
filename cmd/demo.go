@@ -17,7 +17,6 @@ var db *sql.DB
 func main() {
 	// Simple key=value log format
 	log.SetOutput(os.Stdout)
-	log.SetFlags(0)
 
 	initDB()
 
