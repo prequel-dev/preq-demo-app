@@ -7,18 +7,25 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite" // pure-Go SQLite driver
 )
 
-var db *sql.DB
+var (
+	db        *sql.DB
+	panicMode bool
+)
 
 func main() {
 	// Simple key=value log format
 	log.SetOutput(os.Stdout)
 
 	initDB()
+
+	panicMode = strings.ToLower(os.Getenv("PANIC")) == ""
+	log.Printf("level=info msg=\"configuration\" panic_mode=%t", panicMode)
 
 	// Register HTTP handlers (badjson route removed, new /migrate route added)
 	http.Handle("/", loggingMiddleware(http.HandlerFunc(rootHandler)))
@@ -71,6 +78,11 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 
 // panicHandler triggers a panic inside a goroutine. The goroutine recovers so the service stays up.
 func panicHandler(w http.ResponseWriter, r *http.Request) {
+	if !panicMode {
+		respondJSON(w, http.StatusOK, map[string]string{"status": "panic disabled"})
+		return
+	}
+
 	go func() {
 		panic("intentional panic inside goroutine for demo purposes")
 	}()
